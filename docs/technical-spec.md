@@ -46,3 +46,39 @@
     Project: petclinic
     ManagedBy: terraform
     Environment: dev
+
+## VPC Network Design
+- VPC CIDR: 10.0.0.0/16
+- Private Subnets: 10.0.1.0/24, 10.0.2.0/24, 10.0.3.0/24
+- Public Subnets: 10.0.101.0/24, 10.0.102.0/24, 10.0.103.0/24
+- Availability Zones: eu-central-1a, eu-central-1b, eu-central-1c
+- No NAT Gateway
+- Enable DNS hostnames and DNS support
+- Tag private subnets: kubernetes.io/role/internal-elb=1
+- Tag public subnets: kubernetes.io/role/elb=1
+
+## Security Groups
+- Allow all egress (0.0.0.0/0)
+- Ingress: 443 (HTTPS), 80 (HTTP) from 0.0.0.0/0
+- Ingress: 8080-9090 within VPC CIDR only
+
+## VPC Network Design
+- VPC CIDR: 10.0.0.0/16
+- DNS hostnames: enabled
+- DNS support: enabled
+- Design: all-public subnets (no NAT Gateway — cost saving)
+- Public Subnet A: 10.0.1.0/24 — eu-central-1a
+- Public Subnet B: 10.0.2.0/24 — eu-central-1b
+- Internet Gateway: attached to VPC
+- Route table: 0.0.0.0/0 → IGW for all public subnets
+- EKS subnet tags:
+    kubernetes.io/cluster/petclinic-eks-dev: shared
+    kubernetes.io/role/elb: "1"
+
+## Security Groups
+- SG eks-nodes: controls node-to-node and node-to-pod traffic
+- SG rds: port 3306 ingress from eks-nodes SG only
+- SG alb: port 80/443 ingress from 0.0.0.0/0, egress to eks-nodes
+- SG eks-cluster: control plane to node communication
+- All SGs: allow all egress
+- Security group rules defined as separate aws_security_group_rule resources
