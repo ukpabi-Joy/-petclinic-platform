@@ -1,0 +1,112 @@
+# Init-container strategy for the database-backed services.
+#
+# customers-service, vets-service and visits-service share the `petclinic`
+# database. Each must not start serving until the schema exists and the
+# database is reachable. These are strategic-merge patches that add a
+# `wait-for-db` initContainer to each Deployment; apply them on top of the
+# base service Deployments (e.g. via Kustomize `patchesStrategicMerge`, or
+# `kubectl patch ... --patch-file`).
+#
+# Ordering: run the `petclinic-db-init` Job (db-init-job.yaml) once to create
+# the schema; thereafter every Pod's initContainer simply blocks until the DB
+# answers, guaranteeing the app container never starts against a missing or
+# unreachable database.
+#
+# The init container reuses the `petclinic-db-credentials` Secret (synced by
+# External Secrets Operator from Secrets Manager).
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customers-service
+  namespace: petclinic-dev
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: wait-for-db
+          image: mysql:8.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              echo "Waiting for ${DB_HOST}:${DB_PORT} ..."
+              until mysqladmin ping --host="${DB_HOST}" --port="${DB_PORT}" \
+                    --user="${DB_USER}" --password="${DB_PASS}" --silent; do
+                sleep 5
+              done
+              echo "Database is reachable."
+          env:
+            - name: DB_HOST
+              valueFrom: { secretKeyRef: { name: petclinic-db-credentials, key: host } }
+            - name: DB_PORT
+              valueFrom: { secretKeyRef: { name: petclinic-db-credentials, key: port } }
+            - name: DB_USER
+              valueFrom: { secretKeyRef: { name: petclinic-db-credentials, key: username } }
+            - name: DB_PASS
+              valueFrom: { secretKeyRef: { name: petclinic-db-credentials, key: password } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vets-service
+  namespace: petclinic-dev
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: wait-for-db
+          image: mysql:8.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              echo "Waiting for ${DB_HOST}:${DB_PORT} ..."
+              until mysqladmin ping --host="${DB_HOST}" --port="${DB_PORT}" \
+                    --user="${DB_USER}" --password="${DB_PASS}" --silent; do
+                sleep 5
+              done
+              echo "Database is reachable."
+          env:
+            - name: DB_HOST
+              valueFrom: { secretKeyRef: { name: petclinic-db-credentials, key: host } }
+            - name: DB_PORT
+              valueFrom: { secretKeyRef: { name: petclinic-db-credentials, key: port } }
+            - name: DB_USER
+              valueFrom: { secretKeyRef: { name: petclinic-db-credentials, key: username } }
+            - name: DB_PASS
+              valueFrom: { secretKeyRef: { name: petclinic-db-credentials, key: password } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: visits-service
+  namespace: petclinic-dev
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: wait-for-db
+          image: mysql:8.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              echo "Waiting for ${DB_HOST}:${DB_PORT} ..."
+              until mysqladmin ping --host="${DB_HOST}" --port="${DB_PORT}" \
+                    --user="${DB_USER}" --password="${DB_PASS}" --silent; do
+                sleep 5
+              done
+              echo "Database is reachable."
+          env:
+            - name: DB_HOST
+              valueFrom: { secretKeyRef: { name: petclinic-db-credentials, key: host } }
+            - name: DB_PORT
+              valueFrom: { secretKeyRef: { name: petclinic-db-credentials, key: port } }
+            - name: DB_USER
+              valueFrom: { secretKeyRef: { name: petclinic-db-credentials, key: username } }
+            - name: DB_PASS
+              valueFrom: { secretKeyRef: { name: petclinic-db-credentials, key: password } }

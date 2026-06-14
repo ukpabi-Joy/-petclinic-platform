@@ -1,0 +1,80 @@
+# One-time schema initialization Job.
+#
+# Connects to the RDS MySQL instance using credentials synced into the
+# `petclinic-db-credentials` Kubernetes Secret (created by External Secrets
+# Operator from Secrets Manager — see Epic 7) and applies the shared schema
+# from the `petclinic-db-schema` ConfigMap.
+#
+# Run once after the database is provisioned:
+#   kubectl apply -f k8s/database/schema-configmap.yaml
+#   kubectl apply -f k8s/database/db-init-job.yaml
+#   kubectl logs -n petclinic-dev job/petclinic-db-init -f
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: petclinic-db-init
+  namespace: petclinic-dev
+  labels:
+    app.kubernetes.io/name: petclinic-db-init
+    app.kubernetes.io/part-of: petclinic
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: petclinic-db-init
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: schema-init
+          image: mysql:8.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -euo pipefail
+              echo "Waiting for ${DB_HOST}:${DB_PORT} ..."
+              until mysqladmin ping --host="${DB_HOST}" --port="${DB_PORT}" \
+                    --user="${DB_USER}" --password="${DB_PASS}" --silent; do
+                sleep 5
+              done
+              echo "Applying Petclinic schema to ${DB_HOST}:${DB_PORT}/${DB_NAME}"
+              mysql --host="${DB_HOST}" --port="${DB_PORT}" \
+                    --user="${DB_USER}" --password="${DB_PASS}" \
+                    "${DB_NAME}" < /schema/schema.sql
+              echo "Schema applied successfully."
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: petclinic-db-credentials
+                  key: host
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: petclinic-db-credentials
+                  key: port
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: petclinic-db-credentials
+                  key: username
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: petclinic-db-credentials
+                  key: password
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: petclinic-db-credentials
+                  key: dbname
+          volumeMounts:
+            - name: schema
+              mountPath: /schema
+              readOnly: true
+      volumes:
+        - name: schema
+          configMap:
+            name: petclinic-db-schema
