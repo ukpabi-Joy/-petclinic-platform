@@ -314,3 +314,259 @@ Create DNS module at terraform/modules/dns/
 - Role allows secretsmanager:GetSecretValue and secretsmanager:DescribeSecret
 - Role trusts EKS OIDC provider
 - Annotated on ESO Kubernetes service account
+
+## Epic 6 — DNS & Ingress
+
+### PetclinicPlatform28 — DNS Module
+Create DNS module at terraform/modules/dns/
+**Acceptance Criteria:**
+- terraform/modules/dns/main.tf, variables.tf, outputs.tf, versions.tf exist
+- Route 53 hosted zone looked up via data source (not created)
+- ACM certificate created for domain
+- DNS validation used for ACM certificate
+- Certificate covers apex and wildcard
+
+### PetclinicPlatform29 — AWS Load Balancer Controller
+**Acceptance Criteria:**
+- IRSA role created for Load Balancer Controller
+- IAM policy allows creating/managing ALBs in EC2
+- Helm chart version: 1.8.1
+- CRDs use app version v2.8.1 URL
+- Controller running in kube-system namespace
+
+### PetclinicPlatform30 — Ingress Manifest
+**Acceptance Criteria:**
+- Kubernetes Ingress manifest created
+- Annotation: kubernetes.io/ingress.class: alb
+- Routes domain → api-gateway service port 8080
+- HTTPS termination at ALB
+- HTTP redirects to HTTPS
+
+### PetclinicPlatform31 — DNS A Record
+**Acceptance Criteria:**
+- Route 53 A record pointing to ALB hostname
+- Record type: A alias
+
+### PetclinicPlatform32 — Wire DNS Module into Dev
+**Acceptance Criteria:**
+- terraform/environments/dev/main.tf calls DNS module
+- terraform validate passes in dev
+
+## Epic 8 — Kubernetes Manifests
+
+### PetclinicPlatform38 — Namespaces Manifest
+**Acceptance Criteria:**
+- k8s/base/namespaces.yaml exists
+- Creates petclinic-dev and petclinic-prod namespaces
+- Namespaces labeled with project and environment tags
+
+### PetclinicPlatform39 — Config Server Manifests
+**Acceptance Criteria:**
+- k8s/base/config-server/deployment.yaml exists
+- k8s/base/config-server/service.yaml exists
+- Port 8888, startupProbe/readinessProbe/livenessProbe all use /actuator/health
+- No init containers (starts first)
+- Full securityContext applied
+- imagePullPolicy: Always
+
+### PetclinicPlatform40 — Discovery Server Manifests
+**Acceptance Criteria:**
+- k8s/base/discovery-server/deployment.yaml exists
+- k8s/base/discovery-server/service.yaml exists
+- Port 8761
+- Init container waits for config-server:8888/actuator/health
+- Full probes and securityContext applied
+
+### PetclinicPlatform41 — Domain Services Manifests
+**Acceptance Criteria:**
+- k8s/base/customers-service/, visits-service/, vets-service/ exist
+- Ports 8081, 8082, 8083 respectively
+- Init containers wait for config-server and discovery-server
+- DB credentials from petclinic-db-credentials secret
+- Full probes and securityContext applied
+
+### PetclinicPlatform42 — GenAI Service Manifests
+**Acceptance Criteria:**
+- k8s/base/genai-service/deployment.yaml exists
+- Port 8084
+- OpenAI API key from openai-api-key secret
+- Init containers wait for config-server and discovery-server
+- Full probes and securityContext applied
+
+### PetclinicPlatform43 — API Gateway Manifests
+**Acceptance Criteria:**
+- k8s/base/api-gateway/deployment.yaml exists
+- Port 8080
+- Init containers wait for config-server and discovery-server
+- Full probes and securityContext applied
+
+### PetclinicPlatform44 — Admin Server Manifests
+**Acceptance Criteria:**
+- k8s/base/admin-server/deployment.yaml exists
+- Port 9090
+- Init containers wait for config-server and discovery-server
+- Full probes and securityContext applied
+
+### PetclinicPlatform45 — Dev Overlay Patches
+**Acceptance Criteria:**
+- k8s/overlays/dev/kustomization.yaml exists
+- 1 replica per service
+- CPU request: 100m, Memory request: 256Mi
+- No HPA, no PDB
+
+### PetclinicPlatform46 — Prod Overlay Patches
+**Acceptance Criteria:**
+- k8s/overlays/prod/kustomization.yaml exists
+- 2+ replicas per service
+- CPU request: 250m, Memory request: 512Mi
+- PDB configured for all services
+
+### PetclinicPlatform47 — HPA for Prod
+**Acceptance Criteria:**
+- HPA configured for api-gateway, customers-service, visits-service, vets-service
+- Min replicas: 2, Max replicas: 4
+- CPU target: 70%
+
+## Epic 9 — Helm Charts
+
+### PetclinicPlatform107 — Generic Helm Chart
+Create generic Helm chart at helm/petclinic-service/
+**Acceptance Criteria:**
+- helm/petclinic-service/Chart.yaml exists
+- helm/petclinic-service/values.yaml exists with defaults
+- templates/deployment.yaml — with init containers, probes, securityContext
+- templates/service.yaml — ClusterIP
+- templates/configmap.yaml
+- templates/serviceaccount.yaml
+- templates/hpa.yaml — conditional, only renders when autoscaling.enabled=true
+- templates/pdb.yaml — conditional, only renders when pdb.enabled=true
+- helm lint passes
+
+### PetclinicPlatform108 — Per-Service Values Files
+**Acceptance Criteria:**
+- helm-values/config-server.yaml exists
+- helm-values/discovery-server.yaml exists
+- helm-values/api-gateway.yaml exists
+- helm-values/customers-service.yaml exists
+- helm-values/visits-service.yaml exists
+- helm-values/vets-service.yaml exists
+- helm-values/genai-service.yaml exists
+- helm-values/admin-server.yaml exists
+- Each file contains correct port, image, env vars, secret references
+- Matches exactly the k8s/base/ manifests
+
+### PetclinicPlatform109 — Per-Environment Values Files
+**Acceptance Criteria:**
+- helm-values/dev.yaml exists
+- helm-values/prod.yaml exists
+- Dev: 1 replica, CPU 100m, Memory 256Mi, HPA disabled
+- Prod: 2 replicas, CPU 250m, Memory 512Mi, HPA enabled for correct services
+- PDB enabled in prod
+
+### PetclinicPlatform110 — Helm Validation
+**Acceptance Criteria:**
+- helm lint passes for all services
+- helm template renders correct manifests for all 8 services
+- kubectl apply --dry-run=client passes on rendered output
+- scripts/validate-helm.sh exists and is executable
+
+### PetclinicPlatform111 — Helm Chart Documentation
+**Acceptance Criteria:**
+- helm/petclinic-service/README.md exists
+- Documents values hierarchy
+- Documents deploy command for each service
+- Documents how to add a new service
+
+## Epic 10 — CI/CD Pipeline
+
+### PETPLAT-49 — Build and Push Docker Images Workflow
+**Acceptance Criteria:**
+- .github/workflows/build-push.yml in app repo
+- Triggers on push to main
+- Uses dorny/paths-filter to detect changed services
+- Matrix strategy — only builds changed services
+- Builds linux/arm64 images using Docker Buildx and QEMU
+- Authenticates to AWS using OIDC (no hardcoded keys)
+- Image tags use 7-character commit SHA
+- Fires repository_dispatch to platform repo after push
+
+### PETPLAT-50 — Update Image Tags Workflow
+**Acceptance Criteria:**
+- .github/workflows/update-image-tags.yml in platform repo
+- Triggered by repository_dispatch event type: app-image-built
+- Uses yq to update image.tag in helm-values/{service}.yaml
+- Updates only services that changed (from payload)
+- Commits and pushes updated helm-values to platform repo
+
+### PETPLAT-52 — OIDC Federation for GitHub Actions
+**Acceptance Criteria:**
+- terraform/modules/github-oidc/main.tf exists
+- IAM OIDC provider created for token.actions.githubusercontent.com
+- IAM role trusts app repo fork and main branch only
+- Trust policy uses sts:AssumeRoleWithWebIdentity
+- ECR-only permissions: GetAuthorizationToken, BatchCheckLayerAvailability,
+  PutImage, and layer upload actions
+- No wildcard permissions
+
+### PETPLAT-53 — Reusable Workflow Templates
+**Acceptance Criteria:**
+- Reusable workflow steps extracted where appropriate
+- Located in .github/workflows/reusable/
+
+### PETPLAT-54 — Rollback Strategy Documentation
+**Acceptance Criteria:**
+- docs/rollback-runbook.md exists
+- Documents how to roll back to a previous image SHA
+- Documents how to revert helm-values changes
+
+### PETPLAT-87 — Image Tag Update Mechanism
+**Acceptance Criteria:**
+- yq used to update image.tag in helm-values/{service}.yaml
+- SHA passed via repository_dispatch payload
+- Only changed services updated, not all 8
+- PLATFORM_REPO_TOKEN secret documented
+- Trivy scans image before push — fails on CRITICAL vulnerabilities
+
+## Epic 11 — GitOps with ArgoCD
+
+### PetclinicPlatform112 — ArgoCD Installation Manifests
+**Acceptance Criteria:**
+- k8s/argocd/install/namespace.yaml exists — creates argocd namespace
+- k8s/argocd/install/install.yaml exists — downloaded from stable release
+- File downloaded exactly as-is, not modified or regenerated
+
+### PetclinicPlatform113 — Dev Application CRDs
+**Acceptance Criteria:**
+- k8s/argocd/applications/dev/{service}-dev.yaml exists for all 8 services
+- metadata.name: {service}-dev
+- metadata.namespace: argocd
+- spec.source.repoURL: actual GitHub URL from git remote
+- spec.source.targetRevision: main
+- spec.source.path: helm/petclinic-service
+- spec.source.helm.releaseName: {service} (no -dev suffix)
+- spec.source.helm.valueFiles: [../../helm-values/{service}.yaml, ../../helm-values/dev.yaml]
+- spec.destination.namespace: petclinic-dev
+- syncPolicy.automated.prune: true
+- syncPolicy.automated.selfHeal: true
+- syncOptions: CreateNamespace=true, PruneLast=true, ApplyOutOfSyncOnly=true
+
+### PetclinicPlatform114 — Prod Application CRDs
+**Acceptance Criteria:**
+- k8s/argocd/applications/prod/{service}-prod.yaml exists for all 8 services
+- Same structure as dev but:
+- spec.destination.namespace: petclinic-prod
+- valueFiles use prod.yaml
+- NO syncPolicy.automated block — manual sync only
+
+### PetclinicPlatform115 — ArgoCD RBAC
+**Acceptance Criteria:**
+- k8s/argocd/argocd-rbac-cm.yaml exists
+- admin role: full access to all apps and settings
+- developer role: view all apps, sync dev only, no prod sync
+
+### PetclinicPlatform116 — Test GitOps Loop
+**Acceptance Criteria:**
+- ArgoCD installed and running in argocd namespace
+- All 8 dev apps show Synced and Healthy
+- Image tag update in helm-values triggers auto-sync within 3 minutes
+- Prod apps require manual sync

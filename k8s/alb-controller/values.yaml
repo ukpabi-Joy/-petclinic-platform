@@ -1,0 +1,31 @@
+# Helm values for the AWS Load Balancer Controller.
+#
+# Chart:       aws-load-balancer-controller 1.8.1   (eks/aws-load-balancer-controller)
+# App version: v2.8.1
+# Namespace:   kube-system
+#
+# The controller authenticates to AWS via IRSA. The service account below is
+# annotated with the IAM role ARN created by terraform/modules/alb-controller
+# (Terraform output: module.alb_controller.role_arn). Replace <ALB_CONTROLLER_ROLE_ARN>
+# with that value (or render it through your tooling) before installing.
+clusterName: petclinic-eks-dev
+region: eu-central-1
+
+# vpcId speeds up startup by skipping VPC auto-discovery. Set to the dev VPC id
+# (Terraform output: module.vpc.vpc_id), or remove to let the controller discover it.
+# vpcId: vpc-xxxxxxxx
+
+serviceAccount:
+  create: true
+  name: aws-load-balancer-controller
+  annotations:
+    eks.amazonaws.com/role-arn: <ALB_CONTROLLER_ROLE_ARN>
+
+# IngressClass `alb` is what the api-gateway Ingress selects via the
+# kubernetes.io/ingress.class annotation.
+ingressClassConfig:
+  default: false
+createIngressClassResource: true
+ingressClass: alb
+
+replicaCount: 2

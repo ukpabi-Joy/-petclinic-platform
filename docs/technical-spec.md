@@ -154,3 +154,114 @@
     openai-api-key (namespace: petclinic-dev)
 - Refresh interval: 1h
 - IRSA role: allows ESO to read from Secrets Manager
+
+## DNS
+- Domain: joycloudsolution.online
+- Registrar: Namecheap
+- Hosted zone: Route 53 (joycloudsolution.online)
+- Nameservers: ns-1757.awsdns-27.co.uk, ns-167.awsdns-20.com,
+  ns-672.awsdns-20.net, ns-1473.awsdns-56.org
+- ACM certificate: joycloudsolution.online + *.joycloudsolution.online
+- DNS validation
+- App URL: https://petclinic.joycloudsolution.online
+
+## Secrets Management
+- Store: AWS Secrets Manager
+- Operator: External Secrets Operator (ESO)
+- ESO namespace: external-secrets
+- ESO Helm chart: external-secrets/external-secrets
+- Secret paths:
+    petclinic/dev/rds: username, password, host, port, dbname
+    petclinic/dev/openai: OPENAI_API_KEY
+    petclinic/dev/config-server: Git credentials
+- Kubernetes secrets created by ESO:
+    petclinic-db-credentials (namespace: petclinic-dev)
+    openai-api-key (namespace: petclinic-dev)
+- Refresh interval: 1h
+- IRSA role: allows ESO to read from Secrets Manager
+- OpenAI API key: sensitive Terraform variable, never hardcoded
+- K8s manifests location: k8s/base/external-secrets/
+
+## Kubernetes Manifests
+- Base manifests: k8s/base/{service}/deployment.yaml, service.yaml
+- Overlays: k8s/overlays/dev/, k8s/overlays/prod/
+- Namespaces: petclinic-dev, petclinic-prod
+- Init containers: busybox:1.36, wget loops polling health endpoints
+- Startup order: config-server → discovery-server → all other services
+- imagePullPolicy: Always on all deployments
+
+## Application Services
+| Service | Port | Startup dependency |
+|---------|------|--------------------|
+| config-server | 8888 | none |
+| discovery-server | 8761 | config-server |
+| api-gateway | 8080 | config-server, discovery-server |
+| customers-service | 8081 | config-server, discovery-server |
+| visits-service | 8082 | config-server, discovery-server |
+| vets-service | 8083 | config-server, discovery-server |
+| genai-service | 8084 | config-server, discovery-server |
+| admin-server | 9090 | config-server, discovery-server |
+
+## Security Context (all deployments)
+- runAsNonRoot: true
+- runAsUser: 1000
+- fsGroup: 1000
+- seccompProfile: RuntimeDefault
+- capabilities drop: ALL
+
+## Kubernetes Overlays
+- Dev: 1 replica, CPU 100m, Memory 256Mi, no HPA, no PDB
+- Prod: 2 replicas, CPU 250m, Memory 512Mi, HPA, PDB
+- HPA targets: api-gateway, customers-service, visits-service, vets-service
+- HPA: min 2, max 4, CPU target 70%
+
+## Helm Charts
+- Chart location: helm/petclinic-service/
+- Values location: helm-values/
+- Per-service values: helm-values/{service}.yaml
+- Per-environment values: helm-values/dev.yaml, helm-values/prod.yaml
+- Values hierarchy: values.yaml → {service}.yaml → {env}.yaml
+- Deploy command:
+    helm upgrade --install {service} helm/petclinic-service
+      -f helm-values/{service}.yaml
+      -f helm-values/{env}.yaml
+      -n petclinic-{env}
+- Conditional templates: HPA and PDB only render when enabled in values
+- Validation script: scripts/validate-helm.sh
+
+## CI/CD Pipeline
+- CI tool: GitHub Actions
+- App repo workflow: .github/workflows/build-push.yml
+- Platform repo workflow: .github/workflows/update-image-tags.yml
+- Trigger: push to main in app repo
+- Changed service detection: dorny/paths-filter
+- Build platform: linux/arm64 (Docker Buildx + QEMU)
+- Image tag: 7-character commit SHA (github.sha[:7])
+- AWS auth: OIDC (no hardcoded keys)
+- Registry: Amazon ECR
+- Security scan: Trivy — fails on CRITICAL vulnerabilities
+- Cross-repo trigger: repository_dispatch event type app-image-built
+- Payload: SHA + list of changed services
+- PLATFORM_REPO_TOKEN: GitHub PAT with write access to platform repo
+
+## OIDC Federation
+- Provider: token.actions.githubusercontent.com
+- Trust policy subject: repo:{username}/spring-petclinic-microservices:ref:refs/heads/main
+- Action: sts:AssumeRoleWithWebIdentity
+- Permissions: ECR push only (no wildcards)
+- Module: terraform/modules/github-oidc/
+
+## GitOps with ArgoCD
+- ArgoCD namespace: argocd
+- Install manifest: downloaded from stable release, not modified
+- Application CRDs: k8s/argocd/applications/dev/, k8s/argocd/applications/prod/
+- Dev sync: automated, prune=true, selfHeal=true
+- Prod sync: manual only, no automated block
+- Source: helm/petclinic-service chart with per-service and per-env values
+- Destination dev: petclinic-dev namespace
+- Destination prod: petclinic-prod namespace
+- repoURL: derived from git remote get-url origin
+- RBAC roles:
+    admin: full access
+    developer: view all, sync dev only
+- UI access: kubectl port-forward svc/argocd-server -n argocd 8080:443

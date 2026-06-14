@@ -1,0 +1,42 @@
+# Ingress for the Petclinic API gateway (PetclinicPlatform30).
+#
+# Traffic flow: Route53 -> ALB -> Ingress -> api-gateway:8080
+#
+# The AWS Load Balancer Controller turns this Ingress into an internet-facing
+# ALB. The ALB terminates HTTPS using the ACM certificate created by the DNS
+# module (apex + wildcard) and redirects all HTTP traffic to HTTPS.
+#
+# Replace <ACM_CERTIFICATE_ARN> with the DNS module output:
+#   terraform -chdir=terraform/environments/dev output -raw acm_certificate_arn
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-gateway
+  namespace: petclinic-dev
+  labels:
+    app.kubernetes.io/name: api-gateway
+    app.kubernetes.io/part-of: petclinic
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    # Terminate HTTPS at the ALB on 443 and listen on 80 for the redirect.
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/certificate-arn: <ACM_CERTIFICATE_ARN>
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+    # Redirect every HTTP request to HTTPS (443).
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health
+spec:
+  ingressClassName: alb
+  rules:
+    - host: petclinic.joycloudsolution.online
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 8080

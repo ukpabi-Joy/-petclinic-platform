@@ -77,3 +77,45 @@ output "rds_secret_name" {
   description = "Secrets Manager secret holding the dev DB credentials."
   value       = module.rds.secret_name
 }
+
+# ---------------------------------------------------------------------------
+# DNS & Ingress (Epic 6)
+# ---------------------------------------------------------------------------
+module "dns" {
+  source = "../../modules/dns"
+
+  environment = "dev"
+
+  # Hosted zone already exists in Route 53; the module looks it up.
+  domain_name = "joycloudsolution.online"
+  vpc_id      = module.vpc.vpc_id
+
+  # App host fronted by the ALB. The A-alias record is created once the ALB
+  # exists — supply alb_dns_name/alb_zone_id then re-apply (see k8s/ingress).
+  alias_record_names = ["petclinic.joycloudsolution.online"]
+}
+
+output "acm_certificate_arn" {
+  description = "ACM certificate ARN (apex + wildcard) for the dev ALB Ingress."
+  value       = module.dns.certificate_arn
+}
+
+output "route53_zone_id" {
+  description = "Route 53 hosted zone ID for the domain."
+  value       = module.dns.zone_id
+}
+
+module "alb_controller" {
+  source = "../../modules/alb-controller"
+
+  environment  = "dev"
+  cluster_name = module.eks.cluster_name
+
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider_url
+}
+
+output "alb_controller_role_arn" {
+  description = "IRSA role ARN for the AWS Load Balancer Controller (dev)."
+  value       = module.alb_controller.role_arn
+}
