@@ -154,3 +154,163 @@ Create 4 security groups in the VPC module.
 - EBS CSI Driver addon installed with pinned version
 - EBS CSI Driver has its own IRSA role with EC2 permissions
 - All addon versions pinned (not latest)
+
+## Epic 4 — Container Registry (ECR)
+
+### PetclinicPlatform18 — ECR Module
+Create reusable ECR module at terraform/modules/ecr/
+**Acceptance Criteria:**
+- terraform/modules/ecr/main.tf, variables.tf, outputs.tf, versions.tf exist
+- 8 repositories: config-server, discovery-server, api-gateway,
+  customers-service, visits-service, vets-service, genai-service, admin-server
+- Naming: petclinic-dev/{service} and petclinic-prod/{service}
+- Scan on push enabled for all repos
+- Lifecycle policy: keep last 10 images
+
+### PetclinicPlatform19 — Tag Immutability
+**Acceptance Criteria:**
+- Dev repos: tag immutability MUTABLE
+- Prod repos: tag immutability IMMUTABLE
+- Configured via variable passed from environment
+
+### PetclinicPlatform20 — Wire ECR Module into Dev and Prod
+**Acceptance Criteria:**
+- terraform/environments/dev/main.tf calls ECR module
+- terraform/environments/prod/main.tf calls ECR module
+- terraform apply succeeds in both environments
+- 8 repos visible in AWS ECR console
+
+### PetclinicPlatform21 — ECR Login Helper Script
+**Acceptance Criteria:**
+- scripts/ecr-login.sh exists and is executable
+- Authenticates Docker to ECR registry
+- Works with aws configure credentials
+
+### PetclinicPlatform85 — Build and Push ARM64 Docker Images
+**Acceptance Criteria:**
+- All 8 images built with --platform linux/arm64
+- Images tagged and pushed to petclinic-dev/ repos
+- Uses eclipse-temurin:17 as base image
+- Build script at scripts/build-and-push.sh
+
+## Epic 5 — Database (RDS MySQL)
+
+### PetclinicPlatform22 — RDS Module
+Create reusable RDS module at terraform/modules/rds/
+**Acceptance Criteria:**
+- terraform/modules/rds/main.tf, variables.tf, outputs.tf, versions.tf exist
+- RDS instance: db.t4g.micro, MySQL 8.0
+- Storage: 20GB gp2, encrypted at rest
+- Single-AZ deployment (dev and prod)
+- DB subnet group covering both VPC subnets
+- Parameter group: MySQL 8.0 with custom settings
+- Accessible only from EKS node security group on port 3306
+- Random password generated via Terraform
+
+### PetclinicPlatform23 — Database Credentials in Secrets Manager
+**Acceptance Criteria:**
+- Credentials stored in AWS Secrets Manager
+- Secret contains: username, password, host, port, dbname
+- Secret named: petclinic/dev/db-credentials
+- Terraform creates and manages the secret
+- No plaintext credentials in code or Git
+
+### PetclinicPlatform24 — Database Initialization Strategy
+**Acceptance Criteria:**
+- Schema files sourced from spring-petclinic-microservices/src/main/resources/db/mysql/
+- Init container strategy defined for customers-service, vets-service, visits-service
+- Kubernetes Job manifest created for one-time schema initialization
+
+### PetclinicPlatform25 — Wire RDS Module into Dev
+**Acceptance Criteria:**
+- terraform/environments/dev/main.tf calls RDS module
+- Passes vpc_id, subnet_ids, security group IDs from VPC module outputs
+- terraform validate passes in dev
+
+### PetclinicPlatform26 — Deploy and Verify Dev RDS
+**Acceptance Criteria:**
+- terraform apply succeeds in dev
+- RDS instance visible in AWS console
+- Endpoint accessible from EKS pod on port 3306
+- Credentials retrievable from Secrets Manager
+
+### PetclinicPlatform27 — Wire RDS Module into Prod
+**Acceptance Criteria:**
+- terraform/environments/prod/main.tf calls RDS module
+- terraform validate passes in prod
+
+## Epic 6 — DNS & Ingress
+
+### PetclinicPlatform28 — DNS Module
+Create DNS module at terraform/modules/dns/
+**Acceptance Criteria:**
+- terraform/modules/dns/main.tf, variables.tf, outputs.tf, versions.tf exist
+- Route 53 hosted zone looked up via data source (not created)
+- ACM certificate created for domain
+- DNS validation used for ACM certificate
+- Certificate covers apex and wildcard: yourdomain.com, *.yourdomain.com
+
+### PetclinicPlatform29 — AWS Load Balancer Controller
+**Acceptance Criteria:**
+- IRSA role created for Load Balancer Controller
+- IAM policy allows creating/managing ALBs in EC2
+- Helm chart installed: aws-load-balancer-controller v1.8.1
+- CRDs downloaded using app version v2.8.1 URL
+- Controller running in kube-system namespace
+
+### PetclinicPlatform30 — Ingress Manifest
+**Acceptance Criteria:**
+- Kubernetes Ingress manifest created
+- Annotation: kubernetes.io/ingress.class: alb
+- Routes yourdomain.com → api-gateway service port 8080
+- HTTPS termination at ALB
+- HTTP redirects to HTTPS
+
+### PetclinicPlatform31 — DNS A Record
+**Acceptance Criteria:**
+- Route 53 A record created pointing to ALB hostname
+- Record type: A (alias)
+- Points apex domain to ALB
+
+### PetclinicPlatform32 — Wire DNS Module into Dev
+**Acceptance Criteria:**
+- terraform/environments/dev/main.tf calls DNS module
+- Passes domain_name, vpc_id, certificate_arn
+- terraform validate passes in dev
+
+## Epic 7 — Secrets Management
+
+### PetclinicPlatform33 — Secrets Manager Resources
+**Acceptance Criteria:**
+- Secret created: petclinic/dev/openai containing OPENAI_API_KEY
+- Secret created: petclinic/dev/config-server containing Git credentials
+- Secrets created via Terraform
+- No plaintext values in code or Git
+
+### PetclinicPlatform34 — Install External Secrets Operator
+**Acceptance Criteria:**
+- ESO installed via Helm on EKS
+- Running in external-secrets namespace
+- ClusterSecretStore created pointing to AWS Secrets Manager
+- IRSA role attached to ESO service account
+
+### PetclinicPlatform35 — ExternalSecret CR for RDS
+**Acceptance Criteria:**
+- ExternalSecret CR created in petclinic-dev namespace
+- Syncs petclinic/dev/rds from Secrets Manager
+- Creates Kubernetes Secret: petclinic-db-credentials
+- Refresh interval: 1h
+
+### PetclinicPlatform36 — ExternalSecret CR for OpenAI
+**Acceptance Criteria:**
+- ExternalSecret CR created in petclinic-dev namespace
+- Syncs petclinic/dev/openai from Secrets Manager
+- Creates Kubernetes Secret: openai-api-key
+- Refresh interval: 1h
+
+### PetclinicPlatform37 — IRSA Role for External Secrets Operator
+**Acceptance Criteria:**
+- IAM role created for ESO service account
+- Role allows secretsmanager:GetSecretValue and secretsmanager:DescribeSecret
+- Role trusts EKS OIDC provider
+- Annotated on ESO Kubernetes service account

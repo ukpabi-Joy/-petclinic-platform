@@ -96,3 +96,61 @@
 - OIDC provider: created from EKS cluster OIDC issuer URL
 - EBS CSI Driver: needs IRSA role with AmazonEBSCSIDriverPolicy
 - Future services: External Secrets Operator, AWS Load Balancer Controller
+
+## ECR
+- Registry: 506261418156.dkr.ecr.eu-central-1.amazonaws.com
+- Dev prefix: petclinic-dev
+- Prod prefix: petclinic-prod
+- Repos (8): config-server, discovery-server, api-gateway,
+  customers-service, visits-service, vets-service,
+  genai-service, admin-server
+- Scan on push: enabled
+- Lifecycle policy: keep last 10 images
+- Dev tag mutability: MUTABLE
+- Prod tag mutability: IMMUTABLE
+- Image platform: linux/arm64 (Graviton nodes)
+
+## RDS
+- Instance: db.t4g.micro
+- Engine: MySQL 8.0
+- DB name: petclinic
+- Username: petclinic
+- Storage: 20GB gp2
+- Encrypted at rest: true
+- Multi-AZ: false (dev and prod — cost optimization)
+- Port: 3306
+- Ingress: from EKS node security group only
+- Secret name: petclinic/dev/db-credentials (dev)
+- Secret name: petclinic/prod/db-credentials (prod)
+- Secret contents: username, password, host, port, dbname
+
+## Database Schema
+- Schema location: spring-petclinic-microservices/src/main/resources/db/mysql/
+- Services using DB: customers-service, vets-service, visits-service
+- Shared database: petclinic
+- Tables: owners, pets, types, vets, specialties, vet_specialties, visits
+
+## DNS & Ingress
+- Domain: (your registered domain in Route 53)
+- Hosted zone: looked up via data source, not created by Terraform
+- ACM certificate: covers apex and wildcard
+- Validation: DNS validation
+- Load Balancer Controller app version: v2.8.1
+- Load Balancer Controller Helm chart version: 1.8.1
+- Ingress class: alb
+- Traffic flow: Route53 → ALB → Ingress → api-gateway:8080
+- IRSA role: allows LB controller to manage ALBs
+
+## Secrets Management
+- Store: AWS Secrets Manager
+- Operator: External Secrets Operator (ESO)
+- ESO namespace: external-secrets
+- Secret paths:
+    petclinic/dev/rds: username, password, host, port, dbname
+    petclinic/dev/openai: OPENAI_API_KEY
+    petclinic/dev/config-server: Git credentials
+- Kubernetes secrets created by ESO:
+    petclinic-db-credentials (namespace: petclinic-dev)
+    openai-api-key (namespace: petclinic-dev)
+- Refresh interval: 1h
+- IRSA role: allows ESO to read from Secrets Manager

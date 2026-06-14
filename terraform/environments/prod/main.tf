@@ -35,3 +35,15 @@ output "eks_update_kubeconfig_command" {
   description = "Command to configure kubectl for the prod cluster."
   value       = module.eks.update_kubeconfig_command
 }
+
+module "ecr" {
+  source = "../../modules/ecr"
+
+  environment    = "prod"
+  tag_mutability = "IMMUTABLE"
+}
+
+output "ecr_repository_urls" {
+  description = "ECR repository URLs for the prod environment."
+  value       = module.ecr.repository_urls
+}

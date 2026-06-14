@@ -35,3 +35,15 @@ output "eks_update_kubeconfig_command" {
   description = "Command to configure kubectl for the dev cluster."
   value       = module.eks.update_kubeconfig_command
 }
+
+module "ecr" {
+  source = "../../modules/ecr"
+
+  environment    = "dev"
+  tag_mutability = "MUTABLE"
+}
+
+output "ecr_repository_urls" {
+  description = "ECR repository URLs for the dev environment."
+  value       = module.ecr.repository_urls
+}
