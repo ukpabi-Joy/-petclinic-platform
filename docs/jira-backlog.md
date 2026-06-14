@@ -105,3 +105,52 @@ Create 4 security groups in the VPC module.
 **Acceptance Criteria:**
 - terraform/environments/prod/main.tf calls the VPC module
 - terraform validate passes in prod
+
+## Epic 3 — EKS Cluster
+
+### PetclinicPlatform12 — EKS Cluster, IAM Role, OIDC Provider
+**Acceptance Criteria:**
+- EKS cluster named petclinic-eks-dev in eu-central-1
+- Cluster IAM role with AmazonEKSClusterPolicy
+- OIDC provider created for IRSA
+- Public endpoint enabled
+- Kubernetes version: 1.30
+
+### PetclinicPlatform13 — Managed Node Group
+**Acceptance Criteria:**
+- Node group with t4g.small (ARM64/Graviton)
+- Min: 2, Max: 4, Desired: 2
+- Node IAM role with AmazonEKSWorkerNodePolicy, AmazonEKS_CNI_Policy, AmazonEC2ContainerRegistryReadOnly
+- Nodes launch in VPC subnets
+
+### PetclinicPlatform14 — kubectl Access Configuration
+**Acceptance Criteria:**
+- Output the aws eks update-kubeconfig command
+- Region: eu-central-1
+- Cluster name from module output
+
+### PetclinicPlatform15 — Wire EKS Module into Dev
+**Acceptance Criteria:**
+- terraform/environments/dev/main.tf calls EKS module
+- Passes vpc_id, subnet_ids, security group IDs from VPC module outputs
+- terraform validate passes
+
+### PetclinicPlatform16 — Deploy and Verify Dev EKS Cluster
+**Acceptance Criteria:**
+- terraform apply succeeds in dev
+- kubectl get nodes shows nodes in Ready state
+- OIDC provider visible in AWS console
+
+### PetclinicPlatform17 — Wire EKS Module into Prod
+**Acceptance Criteria:**
+- terraform/environments/prod/main.tf calls EKS module
+- terraform validate passes
+
+### PetclinicPlatform84 — Managed Add-ons
+**Acceptance Criteria:**
+- CoreDNS addon installed with pinned version
+- kube-proxy addon installed with pinned version
+- vpc-cni addon installed with pinned version
+- EBS CSI Driver addon installed with pinned version
+- EBS CSI Driver has its own IRSA role with EC2 permissions
+- All addon versions pinned (not latest)

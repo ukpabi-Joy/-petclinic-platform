@@ -82,3 +82,17 @@
 - SG eks-cluster: control plane to node communication
 - All SGs: allow all egress
 - Security group rules defined as separate aws_security_group_rule resources
+
+## EKS Cluster
+- Cluster name: petclinic-eks-dev (dev), petclinic-eks-prod (prod)
+- Kubernetes version: 1.30
+- Endpoint: public
+- Region: eu-central-1
+- Node type: t4g.small (ARM64/Graviton)
+- Min nodes: 2, Max nodes: 4, Desired: 2
+- Free trial until Dec 2026
+
+## IRSA Roles
+- OIDC provider: created from EKS cluster OIDC issuer URL
+- EBS CSI Driver: needs IRSA role with AmazonEBSCSIDriverPolicy
+- Future services: External Secrets Operator, AWS Load Balancer Controller
