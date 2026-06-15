@@ -1,0 +1,26 @@
+# Helm values for the External Secrets Operator (PetclinicPlatform34).
+#
+# Chart:     external-secrets/external-secrets
+# Namespace: external-secrets
+#
+# ESO authenticates to AWS Secrets Manager via IRSA. The service account below
+# is annotated with the IAM role ARN created by terraform/modules/external-secrets
+# (Terraform output: module.external_secrets.role_arn). Replace
+# <EXTERNAL_SECRETS_ROLE_ARN> with that value before installing.
+serviceAccount:
+  create: true
+  name: external-secrets
+  annotations:
+    eks.amazonaws.com/role-arn: <EXTERNAL_SECRETS_ROLE_ARN>
+
+# Install the CRDs (ClusterSecretStore, ExternalSecret, ...) with the chart.
+installCRDs: true
+
+# The controller and its webhook/cert-controller.
+replicaCount: 1
+
+webhook:
+  replicaCount: 1
+
+certController:
+  replicaCount: 1

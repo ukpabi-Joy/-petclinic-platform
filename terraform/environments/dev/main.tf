@@ -119,3 +119,44 @@ output "alb_controller_role_arn" {
   description = "IRSA role ARN for the AWS Load Balancer Controller (dev)."
   value       = module.alb_controller.role_arn
 }
+
+# ---------------------------------------------------------------------------
+# Secrets Management (Epic 7)
+# ---------------------------------------------------------------------------
+module "secrets" {
+  source = "../../modules/secrets"
+
+  environment = "dev"
+
+  # Sensitive — sourced from TF_VAR_* / tfvars, never committed.
+  openai_api_key             = var.openai_api_key
+  config_server_git_uri      = var.config_server_git_uri
+  config_server_git_username = var.config_server_git_username
+  config_server_git_password = var.config_server_git_password
+}
+
+output "openai_secret_name" {
+  description = "Secrets Manager secret holding the OpenAI API key (dev)."
+  value       = module.secrets.openai_secret_name
+}
+
+output "config_server_secret_name" {
+  description = "Secrets Manager secret holding the config-server Git credentials (dev)."
+  value       = module.secrets.config_server_secret_name
+}
+
+# IRSA role letting the External Secrets Operator read the dev secrets.
+module "external_secrets" {
+  source = "../../modules/external-secrets"
+
+  environment  = "dev"
+  cluster_name = module.eks.cluster_name
+
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider_url
+}
+
+output "external_secrets_role_arn" {
+  description = "IRSA role ARN for the External Secrets Operator (dev)."
+  value       = module.external_secrets.role_arn
+}
