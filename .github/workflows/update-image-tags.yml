@@ -1,0 +1,52 @@
+name: Update Image Tags
+
+on:
+  repository_dispatch:
+    types: [app-image-built]
+
+permissions:
+  contents: write
+
+jobs:
+  update-tags:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout platform repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install yq
+        run: |
+          wget -qO /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          chmod +x /usr/local/bin/yq
+
+      - name: Update image tags for changed services
+        env:
+          SHA: ${{ github.event.client_payload.sha }}
+          SERVICES: ${{ toJson(github.event.client_payload.services) }}
+        run: |
+          echo "Updating image tags to SHA: $SHA"
+          echo "Services to update: $SERVICES"
+
+          for service in $(echo $SERVICES | jq -r '.[]'); do
+            VALUES_FILE="helm-values/${service}.yaml"
+            if [ -f "$VALUES_FILE" ]; then
+              yq e -i ".image.tag = \"${SHA}\"" "$VALUES_FILE"
+              echo "Updated $VALUES_FILE to tag $SHA"
+            else
+              echo "WARNING: $VALUES_FILE not found, skipping"
+            fi
+          done
+
+      - name: Commit and push updated helm-values
+        env:
+          SHA: ${{ github.event.client_payload.sha }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add helm-values/
+          git diff --staged --quiet || \
+            git commit -m "chore: update image tags to ${SHA} [skip ci]"
+          git push
