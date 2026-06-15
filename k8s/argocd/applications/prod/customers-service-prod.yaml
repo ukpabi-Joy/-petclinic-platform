@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: customers-service-prod
+  namespace: argocd
+  labels:
+    project: petclinic
+    environment: prod
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/ukpabi-Joy/-petclinic-platform.git
+    targetRevision: main
+    path: helm/petclinic-service
+    helm:
+      releaseName: customers-service
+      valueFiles:
+        - ../../helm-values/customers-service.yaml
+        - ../../helm-values/prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: petclinic-prod
+  syncOptions:
+    - CreateNamespace=true
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
