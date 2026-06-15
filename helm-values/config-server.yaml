@@ -1,0 +1,23 @@
+# Config Server values (PetclinicPlatform108) — mirrors k8s/base/config-server/.
+#
+# Starts first: NO init containers. All three probes hit the aggregate
+# /actuator/health (no dedicated readiness/liveness health groups).
+nameOverride: config-server
+
+image:
+  repository: config-server
+
+service:
+  port: 8888
+
+env:
+  - name: SPRING_PROFILES_ACTIVE
+    value: "docker"
+
+# config-server has no readiness/liveness health groups; point all probes at
+# the aggregate endpoint (overrides the chart defaults).
+probes:
+  readiness:
+    path: /actuator/health
+  liveness:
+    path: /actuator/health

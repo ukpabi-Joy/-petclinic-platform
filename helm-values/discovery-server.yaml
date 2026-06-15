@@ -1,0 +1,22 @@
+# Discovery Server values (PetclinicPlatform108) — mirrors k8s/base/discovery-server/.
+#
+# Starts second: one init container blocks on config-server before booting.
+nameOverride: discovery-server
+
+image:
+  repository: discovery-server
+
+service:
+  port: 8761
+
+env:
+  - name: SPRING_PROFILES_ACTIVE
+    value: "docker"
+  - name: SPRING_CONFIG_IMPORT
+    value: "configserver:http://config-server:8888"
+
+initContainers:
+  - name: wait-for-config-server
+    host: config-server
+    port: 8888
+    path: /actuator/health

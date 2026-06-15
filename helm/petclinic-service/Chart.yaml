@@ -1,0 +1,20 @@
+# Generic Helm chart for a single Spring Petclinic microservice (PetclinicPlatform107).
+#
+# One chart, deployed once per service: the per-service values file
+# (helm-values/{service}.yaml) supplies the name, port, env and init containers,
+# and the per-environment file (helm-values/{dev,prod}.yaml) supplies replicas,
+# resources and whether HPA/PDB render.
+apiVersion: v2
+name: petclinic-service
+description: Generic chart for a Spring Petclinic microservice (Deployment, Service, ConfigMap, ServiceAccount, optional HPA + PDB)
+type: application
+# Chart version — bump on chart template changes.
+version: 0.1.0
+# Default application version; overridden per service via image.tag.
+appVersion: "latest"
+keywords:
+  - petclinic
+  - spring-boot
+  - microservice
+maintainers:
+  - name: Joy Ukpabi

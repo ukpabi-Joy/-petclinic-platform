@@ -1,0 +1,153 @@
+# Default values for the petclinic-service chart (PetclinicPlatform107).
+#
+# Values hierarchy (later wins, deep-merged by `helm -f`):
+#   values.yaml  ->  helm-values/{service}.yaml  ->  helm-values/{env}.yaml
+#
+# These defaults mirror the shared conventions of k8s/base/: imagePullPolicy
+# Always, full pod/container securityContext, the three Actuator probes and the
+# 100m/256Mi request / 500m/512Mi limit baseline. Per-service files override
+# name/port/env/initContainers; per-env files override replicas/resources and
+# toggle autoscaling/pdb.
+
+# Service identity. `nameOverride` sets the workload name; defaults to the
+# release name when empty. Every service sets this in its values file.
+nameOverride: ""
+fullnameOverride: ""
+
+# Number of Pod replicas. Dev=1, Prod=2 (set in the env values files).
+replicaCount: 1
+
+image:
+  # Registry + repo prefix. Set per environment (dev.yaml / prod.yaml) so the
+  # same service file resolves to the petclinic-dev or petclinic-prod ECR repo,
+  # exactly like the kustomize overlays' image transformer.
+  registry: ""
+  # Repository (service) name; set in the per-service file. Combined as
+  # "{registry}/{repository}:{tag}" when a registry is present.
+  repository: petclinic-service
+  # Image tag; CI (PETPLAT-50/87) bumps this per service via yq.
+  tag: latest
+  # Always re-pull — matches k8s/base/ (mutable :latest in dev).
+  pullPolicy: Always
+
+# Optional image pull secrets (none needed for ECR with IRSA / node role).
+imagePullSecrets: []
+
+serviceAccount:
+  # Create a dedicated ServiceAccount per service (improvement over the base
+  # manifests, which used the namespace default SA).
+  create: true
+  # Annotations (e.g. an IRSA role ARN) to attach to the ServiceAccount.
+  annotations: {}
+  # Explicit name; defaults to the service fullname when empty.
+  name: ""
+
+# Container port. `name: http` is referenced by the probes and the Service.
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: http
+  portName: http
+
+# Pod-level security context (matches k8s/base/).
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container-level security context (matches k8s/base/).
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
+
+# Resource requests/limits. Env files override the requests (dev 100m/256Mi,
+# prod 250m/512Mi); limits stay constant.
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# Environment variables, passed through verbatim as a Kubernetes env list. This
+# preserves exact fidelity with k8s/base/ (plain values and secretKeyRef both
+# work). Per-service files supply the real list.
+env: []
+#  - name: SPRING_PROFILES_ACTIVE
+#    value: "docker"
+#  - name: DB_HOST
+#    valueFrom:
+#      secretKeyRef:
+#        name: petclinic-db-credentials
+#        key: host
+
+# Optional plain-text config rendered into a ConfigMap and exposed via envFrom.
+# Left empty for the current services (their env is inline, matching base), so
+# the ConfigMap template renders nothing. Populate to opt a service in.
+config: {}
+#  SOME_FLAG: "true"
+
+# Init containers that block startup until a dependency's health endpoint
+# responds. Each entry renders a busybox wget poll loop (matches k8s/base/).
+# config-server has none; discovery-server waits for config; all others wait for
+# both config and discovery.
+initContainers: []
+#  - name: wait-for-config-server
+#    host: config-server
+#    port: 8888
+#    path: /actuator/health
+
+# busybox image used by the generated init containers.
+initImage:
+  repository: busybox
+  tag: "1.36"
+  pullPolicy: Always
+
+# HTTP health probes. Paths default to the Spring Boot health groups used by
+# every service except config-server (which overrides readiness/liveness to the
+# aggregate /actuator/health in its values file). Timings match k8s/base/.
+probes:
+  startup:
+    path: /actuator/health
+    failureThreshold: 30
+    periodSeconds: 10
+  readiness:
+    path: /actuator/health/readiness
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  liveness:
+    path: /actuator/health/liveness
+    initialDelaySeconds: 20
+    periodSeconds: 15
+
+# HorizontalPodAutoscaler (templates/hpa.yaml). Renders only when enabled.
+# Set enabled=true in the values files of HPA-eligible services (api-gateway,
+# customers/visits/vets-service); dev.yaml forces it back off so HPA is prod-only.
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70
+
+# PodDisruptionBudget (templates/pdb.yaml). Renders only when enabled. Enabled
+# for every service in prod.yaml; off in dev.
+pdb:
+  enabled: false
+  minAvailable: 1
+
+# Extra pod labels/annotations (merged with the chart's standard labels).
+podLabels: {}
+podAnnotations: {}
+
+# Standard scheduling knobs (unused by the base services, available per env).
+nodeSelector: {}
+tolerations: []
+affinity: {}

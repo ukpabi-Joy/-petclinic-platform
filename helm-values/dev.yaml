@@ -1,0 +1,31 @@
+# Dev environment overrides (PetclinicPlatform109) — mirrors k8s/overlays/dev/.
+#
+# Applied LAST in the values chain, so it wins:
+#   values.yaml -> {service}.yaml -> dev.yaml
+#
+# Dev = 1 replica, 100m/256Mi requests, dev ECR registry, NO HPA, NO PDB.
+# Deploy into the petclinic-dev namespace (-n petclinic-dev).
+
+replicaCount: 1
+
+image:
+  # Mutable dev ECR registry + repo prefix; combined with the per-service
+  # image.repository to form the full image reference.
+  registry: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# Force autoscaling off in dev even for HPA-eligible services (their values
+# files set autoscaling.enabled=true; this deep-merge override wins).
+autoscaling:
+  enabled: false
+
+# No PodDisruptionBudgets in dev.
+pdb:
+  enabled: false
