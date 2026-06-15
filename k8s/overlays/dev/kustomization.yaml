@@ -1,0 +1,73 @@
+# Dev overlay (PetclinicPlatform45).
+#
+# - namespace: petclinic-dev
+# - 1 replica per service
+# - CPU request 100m, memory request 256Mi
+# - images resolved to the petclinic-dev ECR registry
+# - NO HPA, NO PDB (those are prod-only)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: petclinic-dev
+
+resources:
+  - ../../base
+
+# Map each base placeholder image to the dev ECR registry.
+# CI updates newTag per service; "latest" is the placeholder default.
+images:
+  - name: petclinic/config-server
+    newName: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/config-server
+    newTag: latest
+  - name: petclinic/discovery-server
+    newName: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/discovery-server
+    newTag: latest
+  - name: petclinic/customers-service
+    newName: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/customers-service
+    newTag: latest
+  - name: petclinic/visits-service
+    newName: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/visits-service
+    newTag: latest
+  - name: petclinic/vets-service
+    newName: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/vets-service
+    newTag: latest
+  - name: petclinic/genai-service
+    newName: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/genai-service
+    newTag: latest
+  - name: petclinic/api-gateway
+    newName: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/api-gateway
+    newTag: latest
+  - name: petclinic/admin-server
+    newName: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/admin-server
+    newTag: latest
+
+# 1 replica per service (CPU/memory requests already 100m/256Mi in the base).
+replicas:
+  - name: config-server
+    count: 1
+  - name: discovery-server
+    count: 1
+  - name: customers-service
+    count: 1
+  - name: visits-service
+    count: 1
+  - name: vets-service
+    count: 1
+  - name: genai-service
+    count: 1
+  - name: api-gateway
+    count: 1
+  - name: admin-server
+    count: 1
+
+# Pin dev resource requests to 100m CPU / 256Mi memory on every Deployment.
+patches:
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 100m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 256Mi

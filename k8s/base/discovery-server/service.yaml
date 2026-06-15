@@ -1,0 +1,18 @@
+# Discovery Server Service (PetclinicPlatform40).
+# ClusterIP on 8761 — Eureka registry endpoint (http://discovery-server:8761/eureka/).
+apiVersion: v1
+kind: Service
+metadata:
+  name: discovery-server
+  labels:
+    app.kubernetes.io/name: discovery-server
+    app.kubernetes.io/component: discovery-server
+    app.kubernetes.io/part-of: petclinic
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: discovery-server
+  ports:
+    - name: http
+      port: 8761
+      targetPort: http

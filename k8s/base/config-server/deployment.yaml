@@ -1,0 +1,77 @@
+# Config Server (PetclinicPlatform39).
+#
+# Spring Cloud Config Server — the first service to start. Every other service
+# blocks (via an init container) on this one's /actuator/health endpoint before
+# booting, so config-server itself has NO init containers.
+#
+# All three probes hit /actuator/health (the aggregate health group): the
+# config server has no separate readiness/liveness health groups configured.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-server
+  labels:
+    app.kubernetes.io/name: config-server
+    app.kubernetes.io/component: config-server
+    app.kubernetes.io/part-of: petclinic
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: config-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: config-server
+        app.kubernetes.io/component: config-server
+        app.kubernetes.io/part-of: petclinic
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: config-server
+          image: petclinic/config-server:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8888
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 15

@@ -1,0 +1,75 @@
+# Prod overlay (PetclinicPlatform46 + PetclinicPlatform47).
+#
+# - namespace: petclinic-prod
+# - 2 replicas per service
+# - CPU request 250m, memory request 512Mi
+# - images resolved to the petclinic-prod ECR registry
+# - PDB for every service (pdb.yaml)
+# - HPA for api-gateway, customers/visits/vets-service (hpa.yaml)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: petclinic-prod
+
+resources:
+  - ../../base
+  - pdb.yaml
+  - hpa.yaml
+
+# Map each base placeholder image to the prod ECR registry (IMMUTABLE tags).
+images:
+  - name: petclinic/config-server
+    newName: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-prod/config-server
+    newTag: latest
+  - name: petclinic/discovery-server
+    newName: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-prod/discovery-server
+    newTag: latest
+  - name: petclinic/customers-service
+    newName: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-prod/customers-service
+    newTag: latest
+  - name: petclinic/visits-service
+    newName: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-prod/visits-service
+    newTag: latest
+  - name: petclinic/vets-service
+    newName: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-prod/vets-service
+    newTag: latest
+  - name: petclinic/genai-service
+    newName: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-prod/genai-service
+    newTag: latest
+  - name: petclinic/api-gateway
+    newName: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-prod/api-gateway
+    newTag: latest
+  - name: petclinic/admin-server
+    newName: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-prod/admin-server
+    newTag: latest
+
+# 2 replicas per service.
+replicas:
+  - name: config-server
+    count: 2
+  - name: discovery-server
+    count: 2
+  - name: customers-service
+    count: 2
+  - name: visits-service
+    count: 2
+  - name: vets-service
+    count: 2
+  - name: genai-service
+    count: 2
+  - name: api-gateway
+    count: 2
+  - name: admin-server
+    count: 2
+
+# Pin prod resource requests to 250m CPU / 512Mi memory on every Deployment.
+patches:
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 250m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: 512Mi

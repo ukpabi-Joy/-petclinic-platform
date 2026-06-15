@@ -1,0 +1,24 @@
+# Application namespaces (PetclinicPlatform38).
+#
+# Creates the two workload namespaces. The dev and prod overlays each target
+# one of these via their `namespace:` field. Applied once per cluster,
+# independently of the service overlays:
+#   kubectl apply -f k8s/base/namespaces.yaml
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: petclinic-dev
+  labels:
+    app.kubernetes.io/part-of: petclinic
+    petclinic.io/project: petclinic
+    petclinic.io/environment: dev
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: petclinic-prod
+  labels:
+    app.kubernetes.io/part-of: petclinic
+    petclinic.io/project: petclinic
+    petclinic.io/environment: prod

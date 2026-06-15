@@ -1,0 +1,29 @@
+# Base Kustomization for the Petclinic microservices (Epic 8).
+#
+# Aggregates every service's Deployment + Service. The dev and prod overlays
+# layer on namespace, replica count, resource requests, image registry/tag, and
+# (prod only) HPA + PDB. namespaces.yaml is intentionally NOT included here — it
+# creates both petclinic-dev and petclinic-prod and is applied once per cluster.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+commonLabels:
+  app.kubernetes.io/managed-by: kustomize
+
+resources:
+  - config-server/deployment.yaml
+  - config-server/service.yaml
+  - discovery-server/deployment.yaml
+  - discovery-server/service.yaml
+  - customers-service/deployment.yaml
+  - customers-service/service.yaml
+  - visits-service/deployment.yaml
+  - visits-service/service.yaml
+  - vets-service/deployment.yaml
+  - vets-service/service.yaml
+  - genai-service/deployment.yaml
+  - genai-service/service.yaml
+  - api-gateway/deployment.yaml
+  - api-gateway/service.yaml
+  - admin-server/deployment.yaml
+  - admin-server/service.yaml

@@ -1,0 +1,109 @@
+# PodDisruptionBudgets for prod (PetclinicPlatform46).
+#
+# One PDB per service, minAvailable: 1 — keeps at least one Pod serving during
+# voluntary disruptions (node drains, rollouts). namespace is injected by the
+# prod overlay's `namespace:` field.
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: config-server
+  labels:
+    app.kubernetes.io/name: config-server
+    app.kubernetes.io/part-of: petclinic
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: config-server
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: discovery-server
+  labels:
+    app.kubernetes.io/name: discovery-server
+    app.kubernetes.io/part-of: petclinic
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: discovery-server
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: customers-service
+  labels:
+    app.kubernetes.io/name: customers-service
+    app.kubernetes.io/part-of: petclinic
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: customers-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: visits-service
+  labels:
+    app.kubernetes.io/name: visits-service
+    app.kubernetes.io/part-of: petclinic
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: visits-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: vets-service
+  labels:
+    app.kubernetes.io/name: vets-service
+    app.kubernetes.io/part-of: petclinic
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vets-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: genai-service
+  labels:
+    app.kubernetes.io/name: genai-service
+    app.kubernetes.io/part-of: petclinic
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: genai-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway
+  labels:
+    app.kubernetes.io/name: api-gateway
+    app.kubernetes.io/part-of: petclinic
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api-gateway
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: admin-server
+  labels:
+    app.kubernetes.io/name: admin-server
+    app.kubernetes.io/part-of: petclinic
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: admin-server

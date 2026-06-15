@@ -1,0 +1,18 @@
+# Config Server Service (PetclinicPlatform39).
+# ClusterIP on 8888 — consumed by every other service as configserver:http://config-server:8888
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-server
+  labels:
+    app.kubernetes.io/name: config-server
+    app.kubernetes.io/component: config-server
+    app.kubernetes.io/part-of: petclinic
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: config-server
+  ports:
+    - name: http
+      port: 8888
+      targetPort: http
