@@ -570,3 +570,100 @@ Create generic Helm chart at helm/petclinic-service/
 - All 8 dev apps show Synced and Healthy
 - Image tag update in helm-values triggers auto-sync within 3 minutes
 - Prod apps require manual sync
+
+## Epic 12 — Observability
+
+### PETPLAT-55 — Prometheus
+**Acceptance Criteria:**
+- k8s/base/observability/prometheus.yaml exists
+- Deployment, Service, ConfigMap, PersistentVolumeClaim
+- Scrapes exactly 5 services: api-gateway, customers-service, visits-service, vets-service, genai-service
+- Scrape endpoint: /actuator/prometheus on correct port
+- Scrape interval: 15s
+- Alertmanager connected via alertmanager_config
+
+### PETPLAT-56 — Grafana
+**Acceptance Criteria:**
+- k8s/base/observability/grafana.yaml exists
+- Deployment, Service, ConfigMaps for datasources and dashboards
+- Prometheus datasource: uid: prometheus, url: http://prometheus:9090
+- Loki datasource: uid: loki, url: http://loki:3100
+- Both datasources auto-provisioned with explicit uid fields
+- PersistentVolumeClaim for dashboard storage
+
+### PETPLAT-57 — Per-Service Grafana Dashboards
+**Acceptance Criteria:**
+- Dashboard panels include refId: A and datasource uid fields
+- JVM metrics dashboard per service
+- HTTP request rate and latency dashboards
+- No Data panels due to missing uid or refId
+
+### PETPLAT-58 — Alerting Rules
+**Acceptance Criteria:**
+- k8s/base/observability/alerting-rules.yaml exists
+- PrometheusRule CRDs for all 5 alert rules:
+  - High error rate: HTTP 5xx > threshold for 5 min
+  - Pod restart loop: restarts > 5 in 15 min
+  - High memory usage: > 80% of limit
+  - Service down: no metrics for 2 min
+  - Slow response time: P99 latency > 2s for 5 min
+
+### PETPLAT-59 — Loki and FluentBit
+**Acceptance Criteria:**
+- k8s/base/observability/loki.yaml exists
+- k8s/base/observability/fluentbit.yaml exists
+- FluentBit DaemonSet with ServiceAccount
+- FluentBit output points to http://loki.monitoring:3100
+- Loki alert rules for error spike and OOM
+
+### PETPLAT-60 — Zipkin
+**Acceptance Criteria:**
+- k8s/base/observability/zipkin.yaml exists
+- Deployed in tracing namespace (not monitoring)
+- Port 9411
+- 5 instrumented services send traces to http://zipkin.tracing:9411/api/v2/spans
+- MANAGEMENT_ZIPKIN_TRACING_ENDPOINT set in service ConfigMaps
+- MANAGEMENT_TRACING_SAMPLING_PROBABILITY=1.0
+
+### PETPLAT-103 — Alertmanager
+**Acceptance Criteria:**
+- k8s/base/observability/alertmanager.yaml exists
+- Deployment, Service, ConfigMap with routing config
+- At least one receiver configured
+- Connected to Prometheus via alertmanager_config
+
+## Epic 13 — Scaling & Cost
+
+### PETPLAT-72 — Metrics Server
+**Acceptance Criteria:**
+- k8s/base/karpenter/metrics-server.yaml exists
+- Downloaded from official manifest
+- Required for HPA to function
+
+### PETPLAT-73 — Karpenter IAM and Kubernetes Resources
+**Acceptance Criteria:**
+- terraform/modules/karpenter/main.tf exists
+- IAM role for Karpenter controller (IRSA with OIDC trust policy)
+- IAM policy with EC2/EKS/IAM/SQS/pricing permissions
+- IAM instance profile: petclinic-{env}-karpenter-node-profile
+- SQS interruption queue (20-minute visibility timeout)
+- EventBridge rules for 4 events: spot interruption, rebalance, instance state change, scheduled change
+- SQS resource policy allowing EventBridge to publish
+- k8s/base/karpenter/nodepool.yaml exists
+- NodePool: ARM64, t4g.small/t4g.medium, on-demand, CPU limit 8, memory 32Gi
+- EC2NodeClass: AL2023, subnet/sg selector karpenter.sh/discovery
+- Instance profile name matches Terraform output exactly
+
+### PETPLAT-74 — NodePool Spot Override
+**Acceptance Criteria:**
+- k8s/base/karpenter/nodepool-spot-dev.yaml exists as separate file
+- Capacity type: spot and on-demand
+- Comment at top explaining when to apply
+
+### PETPLAT-75 — AWS Budget Alerts
+**Acceptance Criteria:**
+- aws_budgets_budget resource in dev and prod environments
+- Monthly budget: $100
+- Alert thresholds: 50%, 80%, 100% of actual spend
+- Email notification to var.budget_alert_email
+- Notification type: ACTUAL not FORECASTED

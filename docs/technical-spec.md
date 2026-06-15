@@ -265,3 +265,49 @@
     admin: full access
     developer: view all, sync dev only
 - UI access: kubectl port-forward svc/argocd-server -n argocd 8080:443
+
+## Observability
+- Namespace: monitoring (all components except Zipkin)
+- Zipkin namespace: tracing
+- Prometheus port: 9090, scrape interval: 15s
+- Grafana port: 3000, credentials: admin/admin
+- Loki port: 3100
+- Alertmanager port: 9093
+- Zipkin port: 9411
+- Prometheus scrape targets (5 only):
+    api-gateway:8080, customers-service:8081,
+    visits-service:8082, vets-service:8083, genai-service:8084
+- Grafana datasource UIDs: prometheus, loki (explicit, not auto-generated)
+- Tracing env vars (5 instrumented services):
+    MANAGEMENT_ZIPKIN_TRACING_ENDPOINT=http://zipkin.tracing:9411/api/v2/spans
+    MANAGEMENT_TRACING_SAMPLING_PROBABILITY=1.0
+- Alert rules:
+    High error rate: HTTP 5xx > threshold for 5 min
+    Pod restart loop: restarts > 5 in 15 min
+    High memory usage: > 80% of limit
+    Service down: no metrics for 2 min
+    Slow response time: P99 latency > 2s for 5 min
+
+## Karpenter Node Autoscaling
+- Namespace: kube-system
+- Helm chart: oci://public.ecr.aws/karpenter/karpenter version 1.0.0
+- IRSA role: petclinic-{env}-karpenter-role
+- Instance profile: petclinic-{env}-karpenter-node-profile
+- SQS queue: interruption handling, 20-minute visibility timeout
+- EventBridge rules: spot interruption, rebalance, instance state change, scheduled change
+- NodePool instance types: t4g.small, t4g.medium
+- NodePool capacity: on-demand (Graviton free trial), spot override in separate file
+- NodePool limits: CPU 8, memory 32Gi
+- Consolidation: WhenUnderutilized, consolidateAfter 30s
+- Subnet/SG discovery tag: karpenter.sh/discovery=petclinic-{env}
+- EC2NodeClass AMI: AL2023
+- Module location: terraform/modules/karpenter/
+
+## Scaling and Cost
+- Metrics Server: required for HPA
+- HPA targets: api-gateway, customers-service, visits-service, vets-service
+- HPA: min 2, max 4, CPU target 70%
+- AWS Budget: $100/month per environment
+- Budget alert thresholds: 50%, 80%, 100% actual spend
+- Budget notification: email via var.budget_alert_email
+- Spot override file: k8s/base/karpenter/nodepool-spot-dev.yaml
