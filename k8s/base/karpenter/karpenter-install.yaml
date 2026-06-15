@@ -1,0 +1,13 @@
+# Karpenter Helm Install Command
+# Run after terraform apply to get the output values
+#
+# helm upgrade --install karpenter oci://public.ecr.aws/karpenter/karpenter \
+#   --version 1.0.0 \
+#   --namespace kube-system \
+#   --set settings.clusterName=$(cd terraform/environments/dev && terraform output -raw cluster_name) \
+#   --set settings.interruptionQueue=$(cd terraform/environments/dev && terraform output -raw karpenter_queue_name) \
+#   --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$(cd terraform/environments/dev && terraform output -raw karpenter_role_arn) \
+#   --wait
+#
+# Verify installation:
+# kubectl get pods -n kube-system -l app.kubernetes.io/name=karpenter

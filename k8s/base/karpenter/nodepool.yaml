@@ -1,0 +1,51 @@
+# NodePool — on-demand Graviton instances
+# Graviton free trial active until Dec 2026
+# Switch to spot after trial expires using nodepool-spot-dev.yaml
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: petclinic-dev
+spec:
+  template:
+    spec:
+      requirements:
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["arm64"]
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values: ["t4g.small", "t4g.medium"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: ["eu-central-1a", "eu-central-1b", "eu-central-1c"]
+      nodeClassRef:
+        apiVersion: karpenter.k8s.aws/v1
+        kind: EC2NodeClass
+        name: petclinic-dev
+  limits:
+    cpu: "8"
+    memory: 32Gi
+  disruption:
+    consolidationPolicy: WhenUnderutilized
+    consolidateAfter: 30s
+---
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: petclinic-dev
+spec:
+  amiFamily: AL2023
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: petclinic-dev
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: petclinic-dev
+  instanceProfile: petclinic-dev-karpenter-node-profile
+  tags:
+    project: petclinic
+    environment: dev
+    managed-by: karpenter
