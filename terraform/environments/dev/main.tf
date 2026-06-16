@@ -66,6 +66,7 @@ module "rds" {
 
   db_name  = "petclinic"
   username = "petclinic"
+  backup_retention_period = 0
 }
 
 output "rds_endpoint" {
