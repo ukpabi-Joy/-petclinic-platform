@@ -1,3 +1,10 @@
 image:
   repository: config-server
   tag: "4546733"
+
+service:
+  port: 8888
+  targetPort: http
+  portName: http
+
+containerPort: 8888

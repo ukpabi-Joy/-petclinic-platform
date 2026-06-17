@@ -1,3 +1,10 @@
 image:
   repository: discovery-server
   tag: "4546733"
+
+service:
+  port: 8761
+  targetPort: http
+  portName: http
+
+containerPort: 8761

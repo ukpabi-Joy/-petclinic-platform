@@ -1,3 +1,10 @@
 image:
   repository: admin-server
   tag: "4546733"
+
+service:
+  port: 9090
+  targetPort: http
+  portName: http
+
+containerPort: 9090
