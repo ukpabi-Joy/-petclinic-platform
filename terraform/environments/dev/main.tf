@@ -161,3 +161,24 @@ output "external_secrets_role_arn" {
   description = "IRSA role ARN for the External Secrets Operator (dev)."
   value       = module.external_secrets.role_arn
 }
+
+# GitHub OIDC — allows GitHub Actions to push to ECR
+module "github_oidc" {
+  source = "../../modules/github-oidc"
+
+  environment        = "dev"
+  project            = "petclinic"
+  aws_account_id     = "506261418156"
+  ecr_repository_arns = values(module.ecr.repository_arns)
+
+  tags = {
+    Project     = "petclinic"
+    Environment = "dev"
+    ManagedBy   = "terraform"
+  }
+}
+
+output "github_actions_role_arn" {
+  description = "IAM role ARN for GitHub Actions OIDC"
+  value       = module.github_oidc.github_actions_role_arn
+}

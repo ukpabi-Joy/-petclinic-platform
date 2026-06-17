@@ -24,9 +24,11 @@ jobs:
 
       - name: Update image tags for changed services
         env:
-          SHA: ${{ github.event.client_payload.sha }}
+          FULL_SHA: ${{ github.event.client_payload.sha }}
           SERVICES: ${{ toJson(github.event.client_payload.services) }}
         run: |
+          # Use only first 7 characters of SHA
+          SHA="${FULL_SHA::7}"
           echo "Updating image tags to SHA: $SHA"
           echo "Services to update: $SERVICES"
 
@@ -42,8 +44,9 @@ jobs:
 
       - name: Commit and push updated helm-values
         env:
-          SHA: ${{ github.event.client_payload.sha }}
+          FULL_SHA: ${{ github.event.client_payload.sha }}
         run: |
+          SHA="${FULL_SHA::7}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add helm-values/
