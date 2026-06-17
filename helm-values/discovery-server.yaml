@@ -1,3 +1,3 @@
 image:
-  repository: ghcr.io/ukpabi-Joy/discovery-server
+  repository: 506261418156.dkr.ecr.eu-central-1.amazonaws.com/petclinic-dev/discovery-server
   tag: "4546733"
