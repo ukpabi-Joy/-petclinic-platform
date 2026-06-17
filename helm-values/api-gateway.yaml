@@ -3,13 +3,11 @@
 # Spring Cloud Gateway — the public entry point fronted by the ALB Ingress.
 # Waits for config-server then discovery-server. HPA-eligible (prod).
 nameOverride: api-gateway
-
 image:
   repository: api-gateway
-
+  tag: af9fdea356c6ce8fcdbefec69f02e11404d14286
 service:
   port: 8080
-
 env:
   - name: SPRING_PROFILES_ACTIVE
     value: "docker"
@@ -17,7 +15,6 @@ env:
     value: "configserver:http://config-server:8888"
   - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
     value: "http://discovery-server:8761/eureka/"
-
 initContainers:
   - name: wait-for-config-server
     host: config-server
@@ -27,7 +24,6 @@ initContainers:
     host: discovery-server
     port: 8761
     path: /actuator/health
-
 # HPA-eligible service. dev.yaml forces autoscaling off so this is prod-only.
 autoscaling:
   enabled: true

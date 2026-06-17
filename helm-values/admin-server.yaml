@@ -3,13 +3,11 @@
 # Spring Boot Admin UI on port 9090. Waits for config-server then
 # discovery-server. Not HPA-eligible.
 nameOverride: admin-server
-
 image:
   repository: admin-server
-
+  tag: af9fdea356c6ce8fcdbefec69f02e11404d14286
 service:
   port: 9090
-
 env:
   - name: SPRING_PROFILES_ACTIVE
     value: "docker"
@@ -17,7 +15,6 @@ env:
     value: "configserver:http://config-server:8888"
   - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
     value: "http://discovery-server:8761/eureka/"
-
 initContainers:
   - name: wait-for-config-server
     host: config-server

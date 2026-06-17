@@ -2,19 +2,16 @@
 #
 # Starts second: one init container blocks on config-server before booting.
 nameOverride: discovery-server
-
 image:
   repository: discovery-server
-
+  tag: af9fdea356c6ce8fcdbefec69f02e11404d14286
 service:
   port: 8761
-
 env:
   - name: SPRING_PROFILES_ACTIVE
     value: "docker"
   - name: SPRING_CONFIG_IMPORT
     value: "configserver:http://config-server:8888"
-
 initContainers:
   - name: wait-for-config-server
     host: config-server

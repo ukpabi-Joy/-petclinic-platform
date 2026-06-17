@@ -4,13 +4,11 @@
 # come from the petclinic-db-credentials Secret (External Secrets Operator);
 # the JDBC URL is assembled via $(VAR) interpolation. HPA-eligible (prod).
 nameOverride: visits-service
-
 image:
   repository: visits-service
-
+  tag: af9fdea356c6ce8fcdbefec69f02e11404d14286
 service:
   port: 8082
-
 env:
   - name: SPRING_PROFILES_ACTIVE
     value: "docker,mysql"
@@ -45,7 +43,6 @@ env:
         key: password
   - name: SPRING_DATASOURCE_URL
     value: "jdbc:mysql://$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
-
 initContainers:
   - name: wait-for-config-server
     host: config-server
@@ -55,7 +52,6 @@ initContainers:
     host: discovery-server
     port: 8761
     path: /actuator/health
-
 # HPA-eligible service. dev.yaml forces autoscaling off so this is prod-only.
 autoscaling:
   enabled: true

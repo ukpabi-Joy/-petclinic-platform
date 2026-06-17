@@ -4,13 +4,11 @@
 # API key is injected from the openai-api-key Secret (External Secrets Operator).
 # Not HPA-eligible.
 nameOverride: genai-service
-
 image:
   repository: genai-service
-
+  tag: af9fdea356c6ce8fcdbefec69f02e11404d14286
 service:
   port: 8084
-
 env:
   - name: SPRING_PROFILES_ACTIVE
     value: "docker"
@@ -28,7 +26,6 @@ env:
       secretKeyRef:
         name: openai-api-key
         key: OPENAI_API_KEY
-
 initContainers:
   - name: wait-for-config-server
     host: config-server

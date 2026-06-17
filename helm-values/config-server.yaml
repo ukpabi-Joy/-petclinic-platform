@@ -3,17 +3,14 @@
 # Starts first: NO init containers. All three probes hit the aggregate
 # /actuator/health (no dedicated readiness/liveness health groups).
 nameOverride: config-server
-
 image:
   repository: config-server
-
+  tag: af9fdea356c6ce8fcdbefec69f02e11404d14286
 service:
   port: 8888
-
 env:
   - name: SPRING_PROFILES_ACTIVE
     value: "docker"
-
 # config-server has no readiness/liveness health groups; point all probes at
 # the aggregate endpoint (overrides the chart defaults).
 probes:
