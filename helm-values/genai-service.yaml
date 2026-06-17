@@ -1,37 +1,3 @@
-# GenAI Service values (PetclinicPlatform108) — mirrors k8s/base/genai-service/.
-#
-# Spring AI service. Waits for config-server then discovery-server. The OpenAI
-# API key is injected from the openai-api-key Secret (External Secrets Operator).
-# Not HPA-eligible.
-nameOverride: genai-service
 image:
-  repository: genai-service
-  tag: af9fdea356c6ce8fcdbefec69f02e11404d14286
-service:
-  port: 8084
-env:
-  - name: SPRING_PROFILES_ACTIVE
-    value: "docker"
-  - name: SPRING_CONFIG_IMPORT
-    value: "configserver:http://config-server:8888"
-  - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
-    value: "http://discovery-server:8761/eureka/"
-  - name: OPENAI_API_KEY
-    valueFrom:
-      secretKeyRef:
-        name: openai-api-key
-        key: OPENAI_API_KEY
-  - name: SPRING_AI_OPENAI_API_KEY
-    valueFrom:
-      secretKeyRef:
-        name: openai-api-key
-        key: OPENAI_API_KEY
-initContainers:
-  - name: wait-for-config-server
-    host: config-server
-    port: 8888
-    path: /actuator/health
-  - name: wait-for-discovery-server
-    host: discovery-server
-    port: 8761
-    path: /actuator/health
+  repository: ghcr.io/ukpabi-Joy/genai-service
+  tag: "af9fdea"

@@ -1,26 +1,3 @@
-# Admin Server values (PetclinicPlatform108) — mirrors k8s/base/admin-server/.
-#
-# Spring Boot Admin UI on port 9090. Waits for config-server then
-# discovery-server. Not HPA-eligible.
-nameOverride: admin-server
 image:
-  repository: admin-server
-  tag: af9fdea356c6ce8fcdbefec69f02e11404d14286
-service:
-  port: 9090
-env:
-  - name: SPRING_PROFILES_ACTIVE
-    value: "docker"
-  - name: SPRING_CONFIG_IMPORT
-    value: "configserver:http://config-server:8888"
-  - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
-    value: "http://discovery-server:8761/eureka/"
-initContainers:
-  - name: wait-for-config-server
-    host: config-server
-    port: 8888
-    path: /actuator/health
-  - name: wait-for-discovery-server
-    host: discovery-server
-    port: 8761
-    path: /actuator/health
+  repository: ghcr.io/ukpabi-Joy/admin-server
+  tag: "af9fdea"
