@@ -8,3 +8,8 @@ service:
   portName: http
 
 containerPort: 8888
+
+config:
+  SPRING_CLOUD_CONFIG_SERVER_GIT_URI: https://github.com/ukpabi-Joy/spring-petclinic-microservices
+  SPRING_CLOUD_CONFIG_SERVER_GIT_DEFAULT_LABEL: main
+  SPRING_CLOUD_CONFIG_SERVER_GIT_SEARCH_PATHS: config
