@@ -8,3 +8,9 @@ service:
   portName: http
 
 containerPort: 8761
+
+initContainers:
+  - name: wait-for-config-server
+    host: config-server
+    port: 8888
+    path: /actuator/health

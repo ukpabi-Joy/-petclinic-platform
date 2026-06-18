@@ -1,3 +1,13 @@
 image:
   repository: api-gateway
   tag: "4546733"
+
+initContainers:
+  - name: wait-for-config-server
+    host: config-server
+    port: 8888
+    path: /actuator/health
+  - name: wait-for-discovery-server
+    host: discovery-server
+    port: 8761
+    path: /actuator/health
