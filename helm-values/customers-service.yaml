@@ -2,11 +2,15 @@ image:
   repository: customers-service
   tag: "4546733"
 
+service:
+  port: 8081
+
 initContainers:
   - name: wait-for-config-server
     host: config-server
     port: 8888
     path: /actuator/health
+
   - name: wait-for-discovery-server
     host: discovery-server
     port: 8761
