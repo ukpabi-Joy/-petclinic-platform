@@ -3,7 +3,7 @@ image:
   tag: "4546733"
 
 service:
-  port: 8081
+  port: 8083
 
 initContainers:
   - name: wait-for-config-server
