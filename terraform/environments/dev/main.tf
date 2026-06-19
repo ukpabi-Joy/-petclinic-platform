@@ -26,8 +26,8 @@ module "eks" {
   node_security_group_id    = module.vpc.sg_eks_nodes_id
 
   node_instance_types = ["t4g.small"]
-  node_desired_size   = 2
-  node_min_size       = 2
+  node_desired_size   = 3
+  node_min_size       = 3
   node_max_size       = 4
 }
 
