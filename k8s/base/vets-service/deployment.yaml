@@ -80,6 +80,8 @@ spec:
             - name: http
               containerPort: 8083
           env:
+            - name: MANAGEMENT_TRACING_EXPORT_ZIPKIN_ENDPOINT
+              value: "http://zipkin.tracing.svc.cluster.local:9411/api/v2/spans"
             - name: SPRING_PROFILES_ACTIVE
               value: "docker,mysql"
             - name: SPRING_CONFIG_IMPORT
