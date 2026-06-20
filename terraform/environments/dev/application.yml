@@ -1,0 +1,12 @@
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+    zipkin:
+      endpoint: http://zipkin.tracing.svc.cluster.local:9411/api/v2/spans
+
+spring:
+  zipkin:
+    base-url: http://zipkin.tracing.svc.cluster.local:9411
+
