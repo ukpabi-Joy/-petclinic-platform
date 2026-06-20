@@ -24,3 +24,8 @@ override.tf.json
 *.tfplan
 
 # Keep the provider lock file (.terraform.lock.hcl) tracked.
+terraform/environments/dev/tfplan
+**/*.tfplan
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.backup
